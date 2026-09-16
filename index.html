@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Invoice Tracking Portal</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #ffffff;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --brand: #2563eb;
+      --brand-dark: #1d4ed8;
+      --green: #16a34a;
+      --green-bg: #dcfce7;
+      --amber: #d97706;
+      --amber-bg: #fef3c7;
+      --red: #dc2626;
+      --red-bg: #fee2e2;
+      --slate-bg: #f1f5f9;
+      --shadow: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.06);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: #f8fafc;
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    header.topbar {
+      background: var(--bg);
+      color: #fff;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    header.topbar h1 { font-size: 18px; margin: 0; font-weight: 600; }
+    header.topbar .sub { color: #94a3b8; font-size: 12px; }
+
+    .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+    .config-warning {
+      background: var(--amber-bg); color: #92400e; border: 1px solid #fcd34d;
+      border-radius: 10px; padding: 12px 16px; margin-bottom: 20px; font-size: 13px; display: none;
+    }
+    .config-warning.show { display: block; }
+
+    .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+    .tab-btn {
+      background: #fff; border: 1px solid var(--border); color: var(--text);
+      padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 14px;
+    }
+    .tab-btn.active { background: var(--brand); color: #fff; border-color: var(--brand); }
+
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
+    .card {
+      background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+      padding: 16px 18px; box-shadow: var(--shadow);
+    }
+    .card .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+    .card .value { font-size: 24px; font-weight: 700; margin-top: 6px; }
+    .card .value.sm { font-size: 18px; }
+    .card.accent-green { border-left: 4px solid var(--green); }
+    .card.accent-amber { border-left: 4px solid var(--amber); }
+    .card.accent-red { border-left: 4px solid var(--red); }
+    .card.accent-blue { border-left: 4px solid var(--brand); }
+
+    .section { margin-top: 28px; }
+    .section h2 { font-size: 15px; margin: 0 0 12px; }
+
+    .panel {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 12px; padding: 20px; box-shadow: var(--shadow);
+    }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    @media (max-width: 800px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    label.field { display: block; margin-bottom: 14px; }
+    label.field span { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+    input, select, textarea {
+      width: 100%; padding: 9px 11px; border: 1px solid var(--border);
+      border-radius: 8px; font-size: 14px; font-family: inherit;
+    }
+    textarea { resize: vertical; min-height: 60px; }
+    input:focus, select:focus, textarea:focus { outline: 2px solid var(--brand); border-color: var(--brand); }
+
+    .btn {
+      background: var(--brand); color: #fff; border: none; padding: 10px 16px;
+      border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500;
+    }
+    .btn:hover { background: var(--brand-dark); }
+    .btn:disabled { opacity: .6; cursor: not-allowed; }
+    .btn.secondary { background: #fff; color: var(--text); border: 1px solid var(--border); }
+    .btn.small { padding: 6px 10px; font-size: 12px; }
+
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 13px; }
+    th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; }
+    tbody tr:hover { background: var(--slate-bg); }
+
+    .badge { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+    .badge.paid { background: var(--green-bg); color: var(--green); }
+    .badge.partial { background: #dbeafe; color: var(--brand-dark); }
+    .badge.pending { background: var(--slate-bg); color: var(--muted); }
+    .badge.overdue { background: var(--red-bg); color: var(--red); }
+    .badge.duesoon { background: var(--amber-bg); color: var(--amber); }
+
+    .row-overdue { background: #fef2f2; }
+    .row-duesoon { background: #fffbeb; }
+
+    .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+    .toolbar input, .toolbar select { width: auto; }
+    .spacer { flex: 1; }
+
+    .muted { color: var(--muted); }
+    .right { text-align: right; }
+    .empty { text-align: center; color: var(--muted); padding: 40px 0; }
+
+    .toast {
+      position: fixed; bottom: 24px; right: 24px; padding: 12px 18px; border-radius: 10px;
+      color: #fff; box-shadow: var(--shadow); z-index: 1000; max-width: 360px; display: none;
+    }
+    .toast.show { display: block; }
+    .toast.ok { background: var(--green); }
+    .toast.err { background: var(--red); }
+
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(15,23,42,.5); display: none;
+      align-items: center; justify-content: center; z-index: 900; padding: 20px;
+    }
+    .modal-backdrop.show { display: flex; }
+    .modal {
+      background: #fff; border-radius: 12px; padding: 22px; width: 100%; max-width: 460px;
+      max-height: 90vh; overflow: auto;
+    }
+    .modal h3 { margin: 0 0 14px; font-size: 16px; }
+
+    .spinner {
+      display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.5);
+      border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .hint { font-size: 12px; color: var(--muted); margin-top: -8px; margin-bottom: 12px; }
+    .aging-bar { display: flex; height: 10px; border-radius: 6px; overflow: hidden; margin-top: 8px; background: var(--slate-bg); }
+    .aging-seg { height: 100%; }
+    .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 10px; font-size: 12px; }
+    .legend .dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: middle; }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>Invoice Tracking Portal</h1>
+      <div class="sub">Upload invoices, track due dates and pending amounts</div>
+    </div>
+    <div class="sub" id="currency-note">Amounts shown as entered</div>
+  </header>
+
+  <div class="container">
+    <div class="config-warning" id="config-warning">
+      <strong>Backend not configured.</strong> Set <code>API_URL</code> at the top of the
+      &lt;script&gt; in this file to your deployed Apps Script web app URL, then reload.
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="home">Dashboard</button>
+      <button class="tab-btn" data-tab="add">Add Invoice</button>
+      <button class="tab-btn" data-tab="list">All Invoices</button>
+      <button class="tab-btn" data-tab="settings">Settings</button>
+    </div>
+
+    <!-- ================= DASHBOARD ================= -->
+    <section id="tab-home" class="tab-panel">
+      <div id="summary-cards" class="cards">
+        <div class="empty">Loading summary…</div>
+      </div>
+
+      <div class="grid-2 section">
+        <div class="panel">
+          <h2>Aging of outstanding amounts</h2>
+          <div id="aging"></div>
+        </div>
+        <div class="panel">
+          <h2>Top vendors by outstanding amount</h2>
+          <div id="top-vendors"></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Needs attention (overdue &amp; due soon)</h2>
+        <div class="panel">
+          <div id="attention-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= ADD INVOICE ================= -->
+    <section id="tab-add" class="tab-panel" style="display:none;">
+      <div class="panel">
+        <h2>Add a new invoice</h2>
+        <p class="hint">Upload a PDF or image to auto-fill the fields, then correct anything before saving. You can also skip the file and enter everything manually.</p>
+
+        <label class="field">
+          <span>Invoice file (PDF or image) — optional</span>
+          <input type="file" id="f-file" accept="application/pdf,image/*">
+        </label>
+        <div id="upload-status" class="hint"></div>
+
+        <div class="grid-2">
+          <div>
+            <label class="field"><span>Vendor name *</span><input type="text" id="f-vendor" placeholder="e.g. Boggletree Technologies"></label>
+            <label class="field"><span>Invoice number</span><input type="text" id="f-invnum" placeholder="e.g. INV-1042"></label>
+            <label class="field"><span>Invoice date</span><input type="date" id="f-invdate"></label>
+          </div>
+          <div>
+            <label class="field"><span>Billed amount *</span><input type="number" step="0.01" min="0" id="f-amount" placeholder="0.00"></label>
+            <label class="field"><span>Due date *</span><input type="date" id="f-duedate"></label>
+            <label class="field"><span>Notes</span><textarea id="f-notes" placeholder="Optional notes"></textarea></label>
+          </div>
+        </div>
+
+        <input type="hidden" id="f-fileurl">
+        <input type="hidden" id="f-fileid">
+
+        <div style="display:flex; gap:10px; align-items:center;">
+          <button class="btn" id="btn-save">Save invoice</button>
+          <button class="btn secondary" id="btn-clear">Clear</button>
+          <span id="save-status" class="hint"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= ALL INVOICES ================= -->
+    <section id="tab-list" class="tab-panel" style="display:none;">
+      <div class="toolbar">
+        <input type="text" id="filter-search" placeholder="Search vendor / invoice #">
+        <select id="filter-status">
+          <option value="">All statuses</option>
+          <option value="Pending">Pending</option>
+          <option value="Partially Paid">Partially Paid</option>
+          <option value="Paid">Paid</option>
+        </select>
+        <select id="filter-flag">
+          <option value="">All</option>
+          <option value="overdue">Overdue only</option>
+          <option value="duesoon">Due soon only</option>
+        </select>
+        <select id="sort-by">
+          <option value="dueDate">Sort: Due date</option>
+          <option value="remaining">Sort: Remaining amount</option>
+          <option value="vendor">Sort: Vendor</option>
+        </select>
+        <div class="spacer"></div>
+        <button class="btn secondary small" id="btn-refresh">Refresh</button>
+      </div>
+      <div class="panel">
+        <div id="invoice-table"></div>
+      </div>
+    </section>
+
+    <!-- ================= SETTINGS ================= -->
+    <section id="tab-settings" class="tab-panel" style="display:none;">
+      <div class="panel" style="max-width:520px;">
+        <h2>Settings</h2>
+        <label class="field">
+          <span>"Due soon" window (days)</span>
+          <input type="number" id="set-duesoon" min="0" max="365">
+        </label>
+        <p class="hint">An unpaid invoice is flagged "due soon" when its due date is within this many days. Past the due date it becomes "overdue".</p>
+        <button class="btn" id="btn-save-settings">Save settings</button>
+        <span id="settings-status" class="hint"></span>
+      </div>
+    </section>
+  </div>
+
+  <!-- Payment modal -->
+  <div class="modal-backdrop" id="pay-modal">
+    <div class="modal">
+      <h3>Record a payment</h3>
+      <div id="pay-context" class="hint"></div>
+      <label class="field"><span>Amount *</span><input type="number" step="0.01" min="0" id="pay-amount"></label>
+      <label class="field"><span>Payment date</span><input type="date" id="pay-date"></label>
+      <label class="field"><span>Note</span><input type="text" id="pay-note" placeholder="Optional"></label>
+      <div id="pay-history"></div>
+      <div style="display:flex; gap:10px; margin-top:8px;">
+        <button class="btn" id="btn-pay-save">Record payment</button>
+        <button class="btn secondary" id="btn-pay-cancel">Cancel</button>
+        <span id="pay-status" class="hint"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ============================================================
+    // CONFIG: paste your deployed Apps Script web app URL here.
+    // Deploy the Apps Script project as a Web app (Execute as: Me,
+    // Who has access: Anyone) and copy the URL ending in /exec.
+    // ============================================================
+    var API_URL = 'https://script.google.com/macros/s/AKfycbyZJQFk9fXD_usSeZC5a-EWoDXYZDJu263YhzeFK4OVbKm56X2Kxd-3dRNPjnSklwEW/exec';
+
+    // ---------- State ----------
+    var state = {
+      invoices: [],
+      dueSoonDays: 7,
+      activePayInvoice: null
+    };
+
+    // ---------- Utilities ----------
+    function $(id) { return document.getElementById(id); }
+
+    function fmtMoney(n) {
+      var num = Number(n) || 0;
+      return num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function fmtDate(s) { return s || '—'; }
+
+    function toast(msg, isErr) {
+      var t = $('toast');
+      t.textContent = msg;
+      t.className = 'toast show ' + (isErr ? 'err' : 'ok');
+      setTimeout(function () { t.className = 'toast'; }, 3500);
+    }
+
+    function escapeHtml(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    // ---------- API layer (fetch, CORS-safe) ----------
+    // GET reads via query params (no preflight).
+    function apiGet(action) {
+      if (!API_URL) return Promise.reject(new Error('API_URL is not set.'));
+      var url = API_URL + '?action=' + encodeURIComponent(action);
+      return fetch(url, { method: 'GET' }).then(function (r) { return r.json(); });
+    }
+
+    // POST writes as a "simple request": text/plain body avoids the CORS
+    // preflight that Apps Script cannot answer. Body is a JSON string.
+    function apiPost(payload) {
+      if (!API_URL) return Promise.reject(new Error('API_URL is not set.'));
+      return fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      }).then(function (r) { return r.json(); });
+    }
+
+    // ---------- Tabs ----------
+    document.querySelectorAll('.tab-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        document.querySelectorAll('.tab-btn').forEach(function (b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        var tab = btn.getAttribute('data-tab');
+        document.querySelectorAll('.tab-panel').forEach(function (p) { p.style.display = 'none'; });
+        $('tab-' + tab).style.display = 'block';
+        if (tab === 'home') loadDashboard();
+        if (tab === 'list') renderInvoiceTable();
+        if (tab === 'settings') $('set-duesoon').value = state.dueSoonDays;
+      });
+    });
+
+    // ---------- Data loading ----------
+    function loadInvoices(cb) {
+      apiGet('listInvoices')
+        .then(function (res) {
+          if (res && res.ok) {
+            state.invoices = res.invoices || [];
+            state.dueSoonDays = res.dueSoonDays || 7;
+          } else {
+            toast((res && res.error) || 'Failed to load invoices', true);
+          }
+          if (cb) cb();
+        })
+        .catch(function (err) { toast('Load error: ' + err.message, true); if (cb) cb(); });
+    }
+
+    function loadDashboard() {
+      $('summary-cards').innerHTML = '<div class="empty">Loading summary…</div>';
+      apiGet('getDashboardSummary')
+        .then(function (res) {
+          if (!res || !res.ok) { toast((res && res.error) || 'Summary failed', true); return; }
+          renderSummary(res.summary);
+        })
+        .catch(function (err) { toast('Summary error: ' + err.message, true); });
+      // Also refresh invoice list for the attention section.
+      loadInvoices(renderAttention);
+    }
+
+    // ---------- Dashboard rendering ----------
+    function card(label, value, cls, small) {
+      return '<div class="card ' + (cls || '') + '">' +
+        '<div class="label">' + escapeHtml(label) + '</div>' +
+        '<div class="value ' + (small ? 'sm' : '') + '">' + value + '</div></div>';
+    }
+
+    function renderSummary(s) {
+      var html = '';
+      html += card('Total bills', s.totalBills, 'accent-blue');
+      html += card('Total amount', fmtMoney(s.totalAmount), 'accent-blue');
+      html += card('Total paid', fmtMoney(s.totalPaidAmount), 'accent-green');
+      html += card('Total pending', fmtMoney(s.totalPendingAmount), 'accent-amber');
+      html += card('Paid bills', s.countPaid, 'accent-green');
+      html += card('Partially paid', s.countPartial, 'accent-blue');
+      html += card('Pending bills', s.countPending, 'accent-amber');
+      html += card('Due soon (' + s.dueSoonDays + 'd)', s.countDueSoon + ' • ' + fmtMoney(s.amountDueSoon), 'accent-amber', true);
+      html += card('Overdue', s.countOverdue + ' • ' + fmtMoney(s.amountOverdue), 'accent-red', true);
+      $('summary-cards').innerHTML = html;
+
+      renderAging(s.aging);
+      renderTopVendors(s.topVendors);
+    }
+
+    function renderAging(a) {
+      var total = a.current + a.d0_30 + a.d31_60 + a.d61_plus;
+      var el = $('aging');
+      if (total <= 0) { el.innerHTML = '<div class="empty">No outstanding amounts.</div>'; return; }
+      function pct(v) { return (v / total * 100).toFixed(1) + '%'; }
+      var colors = { current: '#2563eb', d0_30: '#16a34a', d31_60: '#d97706', d61_plus: '#dc2626' };
+      var bar = '<div class="aging-bar">' +
+        '<div class="aging-seg" style="width:' + pct(a.current) + ';background:' + colors.current + '"></div>' +
+        '<div class="aging-seg" style="width:' + pct(a.d0_30) + ';background:' + colors.d0_30 + '"></div>' +
+        '<div class="aging-seg" style="width:' + pct(a.d31_60) + ';background:' + colors.d31_60 + '"></div>' +
+        '<div class="aging-seg" style="width:' + pct(a.d61_plus) + ';background:' + colors.d61_plus + '"></div>' +
+        '</div>';
+      var legend = '<div class="legend">' +
+        '<span><span class="dot" style="background:' + colors.current + '"></span>Not due: ' + fmtMoney(a.current) + '</span>' +
+        '<span><span class="dot" style="background:' + colors.d0_30 + '"></span>0–30d overdue: ' + fmtMoney(a.d0_30) + '</span>' +
+        '<span><span class="dot" style="background:' + colors.d31_60 + '"></span>31–60d: ' + fmtMoney(a.d31_60) + '</span>' +
+        '<span><span class="dot" style="background:' + colors.d61_plus + '"></span>60d+: ' + fmtMoney(a.d61_plus) + '</span>' +
+        '</div>';
+      el.innerHTML = bar + legend;
+    }
+
+    function renderTopVendors(list) {
+      var el = $('top-vendors');
+      if (!list || !list.length) { el.innerHTML = '<div class="empty">No outstanding vendor balances.</div>'; return; }
+      var max = list[0].amount || 1;
+      var html = '<table><tbody>';
+      list.forEach(function (v) {
+        var w = (v.amount / max * 100).toFixed(0);
+        html += '<tr><td style="width:40%">' + escapeHtml(v.vendor) + '</td>' +
+          '<td><div class="aging-bar" style="margin:0"><div class="aging-seg" style="width:' + w + '%;background:#2563eb"></div></div></td>' +
+          '<td class="right" style="width:120px">' + fmtMoney(v.amount) + '</td></tr>';
+      });
+      html += '</tbody></table>';
+      el.innerHTML = html;
+    }
+
+    function renderAttention() {
+      var items = state.invoices.filter(function (i) { return i.isOverdue || i.isDueSoon; });
+      items.sort(function (a, b) { return (a.daysUntilDue || 0) - (b.daysUntilDue || 0); });
+      var el = $('attention-list');
+      if (!items.length) { el.innerHTML = '<div class="empty">Nothing overdue or due soon. Nice.</div>'; return; }
+      el.innerHTML = buildTable(items);
+      wireRowActions();
+    }
+
+    // ---------- Invoice table ----------
+    function statusBadge(inv) {
+      var cls = inv.status === 'Paid' ? 'paid' : (inv.status === 'Partially Paid' ? 'partial' : 'pending');
+      var extra = '';
+      if (inv.isOverdue) extra = ' <span class="badge overdue">Overdue</span>';
+      else if (inv.isDueSoon) extra = ' <span class="badge duesoon">Due soon</span>';
+      return '<span class="badge ' + cls + '">' + escapeHtml(inv.status) + '</span>' + extra;
+    }
+
+    function buildTable(list) {
+      if (!list.length) return '<div class="empty">No invoices to show.</div>';
+      var html = '<table><thead><tr>' +
+        '<th>Vendor</th><th>Invoice #</th><th>Due date</th>' +
+        '<th class="right">Billed</th><th class="right">Paid</th><th class="right">Remaining</th>' +
+        '<th>Status</th><th>File</th><th></th></tr></thead><tbody>';
+      list.forEach(function (inv) {
+        var rowCls = inv.isOverdue ? 'row-overdue' : (inv.isDueSoon ? 'row-duesoon' : '');
+        var fileLink = inv.fileUrl ? '<a href="' + escapeHtml(inv.fileUrl) + '" target="_blank" rel="noopener">View</a>' : '<span class="muted">—</span>';
+        var payBtn = inv.status === 'Paid' ? '' :
+          '<button class="btn small" data-pay="' + escapeHtml(inv.id) + '">Pay</button>';
+        html += '<tr class="' + rowCls + '">' +
+          '<td>' + escapeHtml(inv.vendor) + '</td>' +
+          '<td>' + escapeHtml(inv.invoiceNumber) + '</td>' +
+          '<td>' + fmtDate(inv.dueDate) + '</td>' +
+          '<td class="right">' + fmtMoney(inv.billedAmount) + '</td>' +
+          '<td class="right">' + fmtMoney(inv.amountPaid) + '</td>' +
+          '<td class="right">' + fmtMoney(inv.remaining) + '</td>' +
+          '<td>' + statusBadge(inv) + '</td>' +
+          '<td>' + fileLink + '</td>' +
+          '<td class="right">' + payBtn + '</td>' +
+          '</tr>';
+      });
+      html += '</tbody></table>';
+      return html;
+    }
+
+    function renderInvoiceTable() {
+      if (!state.invoices.length) {
+        loadInvoices(renderInvoiceTable);
+        $('invoice-table').innerHTML = '<div class="empty">Loading…</div>';
+        return;
+      }
+      var search = ($('filter-search').value || '').toLowerCase();
+      var status = $('filter-status').value;
+      var flag = $('filter-flag').value;
+      var sortBy = $('sort-by').value;
+
+      var list = state.invoices.filter(function (i) {
+        if (status && i.status !== status) return false;
+        if (flag === 'overdue' && !i.isOverdue) return false;
+        if (flag === 'duesoon' && !i.isDueSoon) return false;
+        if (search) {
+          var hay = (i.vendor + ' ' + i.invoiceNumber).toLowerCase();
+          if (hay.indexOf(search) === -1) return false;
+        }
+        return true;
+      });
+
+      list.sort(function (a, b) {
+        if (sortBy === 'remaining') return b.remaining - a.remaining;
+        if (sortBy === 'vendor') return (a.vendor || '').localeCompare(b.vendor || '');
+        return (a.dueDate || '').localeCompare(b.dueDate || '');
+      });
+
+      $('invoice-table').innerHTML = buildTable(list);
+      wireRowActions();
+    }
+
+    function wireRowActions() {
+      document.querySelectorAll('[data-pay]').forEach(function (btn) {
+        btn.addEventListener('click', function () { openPayModal(btn.getAttribute('data-pay')); });
+      });
+    }
+
+    ['filter-search', 'filter-status', 'filter-flag', 'sort-by'].forEach(function (id) {
+      $(id).addEventListener('input', renderInvoiceTable);
+      $(id).addEventListener('change', renderInvoiceTable);
+    });
+    $('btn-refresh').addEventListener('click', function () { loadInvoices(renderInvoiceTable); });
+
+    // ---------- Add invoice: file upload + OCR ----------
+    $('f-file').addEventListener('change', function () {
+      var file = this.files[0];
+      if (!file) return;
+      var status = $('upload-status');
+      status.innerHTML = '<span class="spinner" style="border-color:#94a3b8;border-top-color:#2563eb"></span> Uploading & scanning…';
+
+      var reader = new FileReader();
+      reader.onload = function () {
+        var base64 = reader.result.split(',')[1];
+        apiPost({ action: 'uploadInvoiceFile', base64: base64, name: file.name, mimeType: file.type })
+          .then(function (res) {
+            if (!res || !res.ok) { status.textContent = (res && res.error) || 'Upload failed'; return; }
+            $('f-fileurl').value = res.fileUrl || '';
+            $('f-fileid').value = res.fileId || '';
+            var ex = res.extracted || {};
+            // Prefill only empty fields so we do not clobber manual edits.
+            if (ex.vendor && !$('f-vendor').value) $('f-vendor').value = ex.vendor;
+            if (ex.amount && !$('f-amount').value) $('f-amount').value = ex.amount;
+            if (ex.invoiceNumber && !$('f-invnum').value) $('f-invnum').value = ex.invoiceNumber;
+            if (ex.invoiceDate && !$('f-invdate').value) $('f-invdate').value = ex.invoiceDate;
+            if (ex.dueDate && !$('f-duedate').value) $('f-duedate').value = ex.dueDate;
+            var note = ex.ocrError ? (' — ' + ex.ocrError) : ' — fields auto-filled where found. Please verify.';
+            status.textContent = 'File uploaded' + note;
+          })
+          .catch(function (err) { status.textContent = 'Upload error: ' + err.message; });
+      };
+      reader.readAsDataURL(file);
+    });
+
+    function clearForm() {
+      ['f-vendor', 'f-invnum', 'f-invdate', 'f-amount', 'f-duedate', 'f-notes', 'f-fileurl', 'f-fileid'].forEach(function (id) { $(id).value = ''; });
+      $('f-file').value = '';
+      $('upload-status').textContent = '';
+      $('save-status').textContent = '';
+    }
+    $('btn-clear').addEventListener('click', clearForm);
+
+    $('btn-save').addEventListener('click', function () {
+      var data = {
+        vendor: $('f-vendor').value,
+        invoiceNumber: $('f-invnum').value,
+        invoiceDate: $('f-invdate').value,
+        dueDate: $('f-duedate').value,
+        billedAmount: $('f-amount').value,
+        notes: $('f-notes').value,
+        fileUrl: $('f-fileurl').value,
+        fileId: $('f-fileid').value
+      };
+      if (!data.vendor.trim()) { $('save-status').textContent = 'Vendor is required.'; return; }
+      if (!data.dueDate) { $('save-status').textContent = 'Due date is required.'; return; }
+
+      var btn = $('btn-save');
+      btn.disabled = true;
+      $('save-status').innerHTML = '<span class="spinner" style="border-color:#94a3b8;border-top-color:#2563eb"></span> Saving…';
+      apiPost({ action: 'addInvoice', data: data })
+        .then(function (res) {
+          btn.disabled = false;
+          if (!res || !res.ok) { $('save-status').textContent = (res && res.error) || 'Save failed'; return; }
+          $('save-status').textContent = '';
+          toast('Invoice saved.');
+          clearForm();
+          loadInvoices();
+        })
+        .catch(function (err) { btn.disabled = false; $('save-status').textContent = 'Error: ' + err.message; });
+    });
+
+    // ---------- Payments ----------
+    function openPayModal(invoiceId) {
+      var inv = state.invoices.filter(function (i) { return i.id === invoiceId; })[0];
+      if (!inv) return;
+      state.activePayInvoice = inv;
+      $('pay-context').innerHTML = '<strong>' + escapeHtml(inv.vendor) + '</strong> — remaining <strong>' + fmtMoney(inv.remaining) + '</strong> of ' + fmtMoney(inv.billedAmount);
+      $('pay-amount').value = '';
+      $('pay-amount').max = inv.remaining;
+      $('pay-date').value = new Date().toISOString().slice(0, 10);
+      $('pay-note').value = '';
+      $('pay-status').textContent = '';
+
+      var hist = inv.payments || [];
+      if (hist.length) {
+        var h = '<div class="hint" style="margin-top:8px">Payment history:</div><table><tbody>';
+        hist.forEach(function (p) {
+          h += '<tr><td>' + fmtDate(p.paymentDate) + '</td><td class="right">' + fmtMoney(p.amount) + '</td><td class="muted">' + escapeHtml(p.note || '') + '</td></tr>';
+        });
+        h += '</tbody></table>';
+        $('pay-history').innerHTML = h;
+      } else {
+        $('pay-history').innerHTML = '<div class="hint">No payments yet.</div>';
+      }
+      $('pay-modal').classList.add('show');
+    }
+
+    function closePayModal() { $('pay-modal').classList.remove('show'); state.activePayInvoice = null; }
+    $('btn-pay-cancel').addEventListener('click', closePayModal);
+
+    $('btn-pay-save').addEventListener('click', function () {
+      var inv = state.activePayInvoice;
+      if (!inv) return;
+      var amt = Number($('pay-amount').value);
+      if (!amt || amt <= 0) { $('pay-status').textContent = 'Enter a valid amount.'; return; }
+      if (amt > inv.remaining + 0.001) { $('pay-status').textContent = 'Amount exceeds remaining balance.'; return; }
+
+      var btn = $('btn-pay-save');
+      btn.disabled = true;
+      $('pay-status').innerHTML = '<span class="spinner" style="border-color:#94a3b8;border-top-color:#2563eb"></span> Saving…';
+      apiPost({ action: 'addPayment', invoiceId: inv.id, amount: amt, paymentDate: $('pay-date').value, note: $('pay-note').value })
+        .then(function (res) {
+          btn.disabled = false;
+          if (!res || !res.ok) { $('pay-status').textContent = (res && res.error) || 'Failed'; return; }
+          toast('Payment recorded.');
+          closePayModal();
+          loadInvoices(function () { renderInvoiceTable(); });
+        })
+        .catch(function (err) { btn.disabled = false; $('pay-status').textContent = 'Error: ' + err.message; });
+    });
+
+    // ---------- Settings ----------
+    $('btn-save-settings').addEventListener('click', function () {
+      var days = Number($('set-duesoon').value);
+      apiPost({ action: 'setDueSoonDays', days: days })
+        .then(function (res) {
+          if (!res || !res.ok) { $('settings-status').textContent = (res && res.error) || 'Failed'; return; }
+          state.dueSoonDays = res.dueSoonDays;
+          $('settings-status').textContent = '';
+          toast('Settings saved.');
+        })
+        .catch(function (err) { $('settings-status').textContent = 'Error: ' + err.message; });
+    });
+
+    // ---------- Init ----------
+    if (!API_URL) {
+      $('config-warning').classList.add('show');
+      $('summary-cards').innerHTML = '<div class="empty">Set API_URL to load data.</div>';
+    } else {
+      loadInvoices(function () {
+        loadDashboard();
+        $('set-duesoon').value = state.dueSoonDays;
+      });
+    }
+  </script>
+</body>
+</html>
